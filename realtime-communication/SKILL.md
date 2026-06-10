@@ -36,6 +36,61 @@ Use this skill when the user wants to:
 - **Concept**: A peer-to-peer protocol for real-time audio, video, and generic data transfer between browsers.
 - **Best For**: Low-latency video/audio calls and peer-to-peer file sharing.
 
+## Implementation Examples
+
+### FastAPI (Python) - WebSocket Example
+```python
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+
+app = FastAPI()
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        await websocket.send_text(message)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            await connection.send_text(message)
+
+manager = ConnectionManager()
+
+@app.websocket("/ws/{client_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: int):
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            await manager.broadcast(f"Client #{client_id} says: {data}")
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        await manager.broadcast(f"Client #{client_id} left the chat")
+```
+
+### gRPC - Real-time Streaming Example (Conceptual)
+```protobuf
+syntax = "proto3";
+
+service ChatService {
+  // Bidirectional streaming
+  rpc ChatStream (stream ChatMessage) returns (stream ChatMessage);
+}
+
+message ChatMessage {
+  string user = 1;
+  string text = 2;
+}
+```
+
 ## Implementation Patterns
 
 ### Connection Management
@@ -50,6 +105,13 @@ Use this skill when the user wants to:
 - **Authentication**: Authenticate connections (e.g., via JWT in the connection handshake).
 - **Authorization**: Use "rooms" or "channels" to ensure users only receive messages they are authorized to see.
 - **Sanitization**: Always sanitize incoming messages to prevent Cross-Site Scripting (XSS).
+
+## Common Pitfalls
+
+- **Connection Leaks**: Forgetting to close/remove connections when a client disconnects, leading to memory leaks and performance degradation.
+- **Scalability Bottlenecks**: Relying on in-memory state for connections without a distributed pub/sub (like Redis) to sync across multiple servers.
+- **Lack of Reconnection Logic**: Assuming the connection will stay alive forever; clients must be able to recover from network drops.
+- **Unsecured WebSockets**: Using `ws://` instead of `wss://`, exposing data to man-in-the-middle attacks.
 
 ## Deliverables
 

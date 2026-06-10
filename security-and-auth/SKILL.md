@@ -21,41 +21,69 @@ Use this skill when the user wants to:
 ### 1. Authentication (AuthN)
 - **Goal**: Verify the identity of a user or service.
 - **Methods**:
-    - **Passwords**: Hashed and salted (e.g., Argon2, bcrypt).
-    - **Tokens**: Stateless (JWT) or State-based (Session Cookies).
-    - **Social/External**: OAuth 2.0, OpenID Connect (Google, GitHub, etc.).
-    - **Multi-Factor Authentication (MFA)**: Adding an extra layer of security.
+    - **Passwords**: Hashed and salted using modern algorithms like Argon2 or bcrypt.
+    - **Tokens**: Stateless (JWT) for scalability, or state-based (Session Cookies) for centralized control.
+    - **Social/External**: OAuth 2.0 and OpenID Connect (Google, GitHub, etc.) for federated identity.
+    - **Multi-Factor Authentication (MFA)**: Adding an extra layer of security (TOTP, SMS, WebAuthn).
 
 ### 2. Authorization (AuthZ)
 - **Goal**: Determine what an authenticated user is allowed to do.
 - **Models**:
-    - **RBAC (Role-Based Access Control)**: Based on user roles (e.g., `Admin`, `Editor`).
-    - **ABAC (Attribute-Based Access Control)**: Based on attributes (e.g., `User.Department == Resource.Department`).
-    - **ACL (Access Control Lists)**: Fine-grained permissions for specific resources.
+    - **RBAC (Role-Based Access Control)**: Assigning permissions to roles (e.g., `Admin`, `User`).
+    - **ABAC (Attribute-Based Access Control)**: Decisions based on attributes of the user, resource, and environment (e.g., `Allow if User.Age > 18 and Resource.Type == 'Sensitive'`).
+    - **ACL (Access Control Lists)**: Fine-grained permissions attached directly to specific resources.
 
 ### 3. Security Auditing & Defense
 - **Input Validation**: Strict schema validation for all incoming data to prevent SQL Injection, XSS, and Command Injection.
-- **Security Headers**: Using `Content-Security-Policy` (CSP), `X-Frame-Options`, etc.
-- **Rate Limiting**: Preventing brute force and DoS attacks.
-- **Audit Logs**: Recording critical security events (logins, permission changes, failed attempts).
+- **Security Headers**: Using `Content-Security-Policy` (CSP), `X-Frame-Options`, `Strict-Transport-Security` (HSTS), etc.
+- **Rate Limiting**: Preventing brute force and DoS attacks by limiting request frequency.
+- **Audit Logs**: Recording critical security events (logins, permission changes, failed attempts) for forensic analysis.
 - **Secrets Management**: Using environment variables or dedicated vaults (e.g., HashiCorp Vault, AWS Secrets Manager) instead of hardcoding keys.
+
+## Implementation Examples
+
+### RBAC vs ABAC (Conceptual)
+
+**RBAC (Simple Role Check):**
+```python
+def delete_user(request, user_id):
+    if request.user.role != 'admin':
+        raise PermissionDenied()
+    # Proceed with deletion...
+```
+
+**ABAC (Attribute-Based Check):**
+```python
+def access_document(request, document):
+    if request.user.department == document.department and request.user.clearance >= 3:
+        return True
+    return False
+```
 
 ## Best Practices
 
 ### Identity & Access Management
 - **Never store plain-text passwords.** Use strong, modern hashing algorithms.
-- **Use short-lived access tokens** and longer-lived refresh tokens.
-- **Follow the Principle of Least Privilege**: Grant only the minimum necessary permissions.
-- **Secure your cookies**: Use `HttpOnly`, `Secure`, and `SameSite` flags.
+- **Use short-lived access tokens** (e.s. JWT) and longer-lived refresh tokens for a balance of security and UX.
+- **Follow the Principle of Least Privilege**: Grant only the minimum necessary permissions required for a task.
+- **Secure your cookies**: Always use `HttpOnly`, `Secure`, and `SameSite=Lax/Strict` flags.
 
 ### Defensive Programming
 - **Fail Securely**: If an authentication or authorization check fails, default to denying access.
-- **Sanitize everything**: Treat all external input as untrusted.
-- **Limit sensitive information in errors**: Don't leak database details or stack traces in production error messages.
+- **Sanitize everything**: Treat all external input (headers, body, query params) as untrusted.
+- **Limit sensitive information in errors**: Don't leak database details, stack traces, or user existence in production error messages.
 
 ### Monitoring & Auditing
-- **Log security-critical events**: Successful/failed logins, unauthorized access attempts, privilege escalations.
-- **Regularly audit permissions**: Ensure users don't accumulate unnecessary rights (Privilege Creep).
+- **Log security-critical events**: Successful/failed logins, unauthorized access attempts, and privilege escalations.
+- **Regularly audit permissions**: Periodically review user roles to prevent "Privilege Creep."
+
+## Common Pitfalls
+
+- **Hardcoding Secrets**: Storing API keys or database passwords in the source code.
+- **Weak Password Policies**: Allowing simple, easily guessable passwords.
+- **Broken Session Management**: Using predictable session IDs or not invalidating sessions on logout.
+- **Insecure Error Messages**: Providing too much detail in error responses (e.g., "User 'admin' exists but password incorrect").
+- **Ignoring Rate Limiting**: Leaving sensitive endpoints (like `/login`) open to brute force attacks.
 
 ## Deliverables
 

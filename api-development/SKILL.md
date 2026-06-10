@@ -38,7 +38,7 @@ Use this skill when the user wants to:
 - **Clear Contract**: Define request/response formats explicitly using schemas (OpenAPI, GraphQL Schema, Protobuf).
 - **Consistent Naming**: Follow conventions (e.g., kebab-case for URIs, camelCase for JSON fields).
 - **Error Handling**: Return descriptive error messages and appropriate HTTP status codes.
-- **Versioning**: Always version your API to prevent breaking changes for clients.
+- **Versioning**: Always version your API to prevent breaking changes.
 
 ### Security
 - **Authentication**: Implement JWT, OAuth2, or API Keys.
@@ -51,17 +51,31 @@ Use this skill when the user wants to:
 - **Caching**: Use HTTP headers (Cache-Control) or server-side caching (Redis) to reduce load.
 - **Compression**: Enable Gzip or Brotli to reduce payload size.
 
-## Code Structure (Example: Layered Architecture)
+## Implementation Examples
 
+### Standard Error Response Format
+```json
+{
+  "error": {
+    "code": "INVALID_INPUT",
+    "message": "The 'email' field must be a valid email address.",
+    "details": [
+      {
+        "field": "email",
+        "issue": "format"
+      }
+    ]
+  }
+}
 ```
-src/
-├── controllers/      # Handle HTTP/RPC requests and responses
-├── services/         # Business logic and orchestration
-├── models/           # Data models and database schemas
-├── repositories/     # Data access layer (abstraction over DB)
-├── middlewares/      # Auth, Logging, Error Handling
-└── dtos/            # Data Transfer Objects (request/response shapes)
-```
+
+## Common Pitfalls
+
+- **Inconsistent Error Responses**: Returning different error formats for different errors, making it hard for clients to handle them.
+- **Lack of Versioning**: Making breaking changes to an existing API without versioning, which breaks all current clients.
+- **Ignoring Pagination**: Returning massive datasets in a single response, causing performance issues and high latency.
+- **Over-reliance on Client-Side Validation**: Relying only on the frontend for validation; always re-validate on the server.
+- **Poor Error Messages**: Returning generic "Internal Server Error" messages without providing enough context for debugging (while still being secure).
 
 ## Deliverables
 
